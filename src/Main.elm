@@ -9,8 +9,8 @@ import GraphicSVG.EllieApp exposing (..)
 import List
 import ShapeCreateAssets exposing (..)
 
-test = [0, 0.5, 1, 0.5, 0, -0.5, -1, -0.5]
-test2 = [1,2,3,4,5,6,7,8]
+sampleList = listToFloat (List.range 0 100)
+divisorForList = 3
 main =
     gameApp Tick
         { model = init -- init is the value in the field model
@@ -37,8 +37,8 @@ view model =
     in
     collage 512 380 <|
               let listOfShapes =  (List.indexedMap (\index y ->
-                                      makeCircle ((toFloat index)*5) (y*10)
-                                 ) (longerList test))
+                                      makeCircle ((toFloat index)*5) (y*15)
+                                 ) (applySinFunc(divideBy(longerList sampleList))))
               in
                     listOfShapes ++ [ circle 15
                         |> filled (oneColour model)
@@ -69,10 +69,23 @@ longerList list =
 {- 
     write a function to draw a line between every point in the list
 -}
+applySinFunc list = 
+    List.map sin list
 
+listToFloat list =
+    List.map toFloat list
 
+divideBy list =
+    List.map divideBy2 list
 
+divideBy2 x = 
+    x/divisorForList
 
+moveShapeList list x y = 
+    List.map (moveIt 50 50) list
+
+moveIt x y = 
+    move (x, y)
 
 makeCircle x y =
     circle 3 |> filled black |> move (x, y)
