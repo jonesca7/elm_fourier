@@ -11,6 +11,8 @@ import ShapeCreateAssets exposing (..)
 
 sampleList = listToFloat (List.range 0 100)
 divisorForList = 3
+startingX = -50
+startingY = 0
 main =
     gameApp Tick
         { model = init -- init is the value in the field model
@@ -35,9 +37,9 @@ view model =
                 ]
         -- Circle that rotates in time with the sin & cosin waves
     in
-    collage 512 380 <|
+    collage 700 500 <|
               let listOfShapes =  (List.indexedMap (\index y ->
-                                      makeCircle ((toFloat index)*5) (y*15)
+                                      makeCircle ((startingX + toFloat index)*5) (startingY + y*15)
                                  ) (applySinFunc(divideBy(longerList sampleList))))
               in
                     listOfShapes ++ [ circle 15
@@ -46,7 +48,6 @@ view model =
                                 orange
                         |> makeTransparent 0.7
                         |> move ( -95, 90 )
-                    , polygon [(0,0),(0,10),(10,10),(10,0)] |> filled (oneAccent model) |> makeTransparent 0.7 |> move ( -95, 86 )
                     , ourTextGroup |> move ( 80, 50)
                     ]
 
