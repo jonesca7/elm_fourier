@@ -9,8 +9,8 @@ import GraphicSVG.EllieApp exposing (..)
 import List
 import ShapeCreateAssets exposing (..)
 
-test = [-1, -0.5, 0, 0.5, 1, 0.5, 0, -0,5]
-
+test = [-1, -0.5, 0, 0.5, 1, 0.5, 0]
+test2 = [1,2,3,4,5,6,7,8]
 main =
     gameApp Tick
         { model = init -- init is the value in the field model
@@ -36,8 +36,11 @@ view model =
         -- Circle that rotates in time with the sin & cosin waves
     in
     collage 512 380 <|
-        
-                    [ circle 15
+              let listOfShapes =  (List.indexedMap (\index y ->
+                                      makeCircle (toFloat index) (y*5)
+                                 ) test)
+              in
+                    listOfShapes ++ [ circle 15
                         |> filled (oneColour model)
                         |> addOutline (solid 2)
                                 orange
@@ -45,32 +48,31 @@ view model =
                         |> move ( -95, 90 )
                     , wedge 5 0.75 |> filled (oneAccent model) |> makeTransparent 0.7 |> move ( -95, 86 )
                     , ourTextGroup |> move ( 80, 50)
-                    {-, group
-                        [ 
-                        testCurve 10.0 5.0
-                        , testCurve 12.0 5.0
-                        , testCurve 14.0 5.0
-                        , testCurve 16.0 5.0
-                        
-                        
-
-                        ]
-                        |> move (50, -30 ) -- moves the wave display-}
-                    ,   List.indexedMap (\index y ->
-                            circle 2 |> filled black |> move (index, y)
-                        ) test
                     ]
 
-plotFunc t = 
-    List.indexedMap (\index y ->
-                        group[
-                            circle 2 |> filled black |> move (index, y)
-                        ]
-                        ) <| t
+
+
+{- this funciton isn't being used -}
+sinCurve2 model =
+    let
+        points =
+            List.map2 (\x y -> ( x, y )) model.sinGraph (List.drop 1 model.sinGraph)
+    in
+    List.take (numGraphPoints model) (List.map (\( ( a, b, col1 ), ( c, d, col2 ) ) -> line ( a, b ) ( c, d ) |> outlined (solid 1) col1) points)
+
+{-
+TODO generate a list to define a sine wave
+-}
+
+
+
+
+makeCircle x y =
+    circle 2 |> filled black |> move (x, y)
 
 testCurve x y =
-    circle 2 |> filled brown |> move(x,y)
-               
+    circle 2 |> filled brown |> move (x,y)
+
 update msg model =
         { model | currentPage = 2}
 
@@ -90,16 +92,8 @@ textBigger str =
 numGraphPoints model =
     round 2505
 
-
-sinCurve model =
-        List.map (\p -> 
-            circle 5 |> filled brown |> move (toFloat p, 0)
-        ) <| List.range 0 10
     {-
-            indexedMap Tuple.pair <| initialize 4 (\n -> circle 5 |> filled brown |> move (n+10, n+50)) 
+            indexedMap Tuple.pair <| initialize 4 (\n -> circle 5 |> filled brown |> move (n+10, n+50))
 
-    (\n -> circle 5 |> filled brown |> move (n+10, n+50)) 
+    (\n -> circle 5 |> filled brown |> move (n+10, n+50))
     -}
-
-
-
