@@ -9,7 +9,7 @@ import GraphicSVG.EllieApp exposing (..)
 import List
 import ShapeCreateAssets exposing (..)
 
-test = [-1, -0.5, 0, 0.5, 1, 0.5, 0]
+test = [0, 0.5, 1, 0.5, 0, -0.5, -1, -0.5]
 test2 = [1,2,3,4,5,6,7,8]
 main =
     gameApp Tick
@@ -31,14 +31,14 @@ view model =
     let
         ourTextGroup =
             group
-                [ textBigger "Select your modifier!" |> move ( -40, 5 )
+                [ textBigger "Add a wave!" |> move ( -80, 5 )
                 ]
         -- Circle that rotates in time with the sin & cosin waves
     in
     collage 512 380 <|
               let listOfShapes =  (List.indexedMap (\index y ->
-                                      makeCircle (toFloat index) (y*5)
-                                 ) test)
+                                      makeCircle ((toFloat index)*5) (y*10)
+                                 ) (longerList test))
               in
                     listOfShapes ++ [ circle 15
                         |> filled (oneColour model)
@@ -46,7 +46,7 @@ view model =
                                 orange
                         |> makeTransparent 0.7
                         |> move ( -95, 90 )
-                    , wedge 5 0.75 |> filled (oneAccent model) |> makeTransparent 0.7 |> move ( -95, 86 )
+                    , polygon [(0,0),(0,10),(10,10),(10,0)] |> filled (oneAccent model) |> makeTransparent 0.7 |> move ( -95, 86 )
                     , ourTextGroup |> move ( 80, 50)
                     ]
 
@@ -63,15 +63,22 @@ sinCurve2 model =
 {-
 TODO generate a list to define a sine wave
 -}
+longerList list = 
+    (list ++ list) 
+
+{- 
+    write a function to draw a line between every point in the list
+-}
+
 
 
 
 
 makeCircle x y =
-    circle 2 |> filled black |> move (x, y)
+    circle 3 |> filled black |> move (x, y)
 
 testCurve x y =
-    circle 2 |> filled brown |> move (x,y)
+    circle 3 |> filled brown |> move (x,y)
 
 update msg model =
         { model | currentPage = 2}
