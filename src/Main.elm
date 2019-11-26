@@ -28,6 +28,7 @@ init =
     minAmplitude = 1,
     frequency = 1,
     minFrequency = 0.1,
+    phase = 0,
     waves = []
     }
 
@@ -39,34 +40,49 @@ view model =
                 polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, -12 ) ] |> filled red |> move (-250, -170) |> notifyTap AmplitudeDown,
                 polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, 12 ) ] |> filled red |> move (-220, -150) |> notifyTap FrequencyUp,
                 polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, -12 ) ] |> filled red |> move (-220, -170) |> notifyTap FrequencyDown,
-                text (String.fromInt model.amplitude ++ " Sin (" ++ String.fromFloat model.frequency ++ "𝜋)") |> size 10 |> centered |> filled red |> move (-230, -160),
-                rect 50 20 |> filled red |> move (-150, -160) |> notifyTap AddWave
+                polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, 12 ) ] |> filled red |> move (-190, -150) |> notifyTap PhaseUp,
+                polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, -12 ) ] |> filled red |> move (-190, -170) |> notifyTap PhaseDown,
+                text (String.fromInt model.amplitude ++ " Sin (" ++ String.fromFloat model.frequency ++ " + " ++ String.fromFloat model.phase ++ "𝜋)") |> size 10 |> centered |> filled red |> move (-230, -160),
+                rect 50 20 |> filled red |> move (-150, -160) |> notifyTap AddWave 
             ]
 
 update msg model =
     case msg of
         Tick t _ ->
-            { model | currentPage = 2 }
+            { model | currentPage = 2 
+            }
         AmplitudeUp ->
             { model | amplitude = 
                 if model.amplitude < model.maxAmplitude then
                     model.amplitude + 1 
                 else
-                    model.amplitude }
+                    model.amplitude 
+            }
         AmplitudeDown ->
             { model | amplitude = 
                 if model.amplitude > model.minAmplitude then
                     model.amplitude - 1
                 else
-                    model.amplitude }
+                    model.amplitude 
+            }
         FrequencyUp ->
-            { model | frequency = Maybe.withDefault 0 (String.toFloat (Round.round 1 (model.frequency + 0.1))) }
+            { model | frequency = Maybe.withDefault 0 (String.toFloat (Round.round 1 (model.frequency + 0.1))) 
+            }
         FrequencyDown ->
             { model | frequency = 
                 if model.frequency > model.minFrequency then
                     Maybe.withDefault 0 (String.toFloat (Round.round 1 (model.frequency - 0.1))) 
                 else
-                    model.frequency }
+                    model.frequency 
+            }
+        PhaseUp ->
+            { model | phase =
+                Maybe.withDefault 0 (String.toFloat (Round.round 1 (model.phase + 0.1))) 
+            }
+        PhaseDown ->
+            { model | phase =
+                Maybe.withDefault 0 (String.toFloat (Round.round 1 (model.phase - 0.1))) 
+            }
         AddWave ->
             { model | waves =
                 model.waves++
@@ -105,4 +121,6 @@ type Msg m1
     | AmplitudeDown
     | FrequencyUp
     | FrequencyDown
+    | PhaseUp
+    | PhaseDown
     | AddWave
