@@ -66,6 +66,7 @@ getComplexComponent model vals =
     else
         List.map .imag vals
 
+
 -- Returns a list of sampled values of the combined wave function
 getSampledInput numSamples waves =
   let
@@ -102,7 +103,6 @@ computeDFT realval =
     ) <| (List.range 0 n)
 
 
-getSumWave : List (Wave) -> Float -> Float
 getSumWave waves x =
   List.foldl (\wave y ->
       y + wave.amp * sin (x * wave.freq + (wave.phase * pi))
@@ -112,7 +112,7 @@ getSumWave waves x =
 main =
     gameApp Tick
         { model = init -- init is the value in the field model
-        , title = "Shape Creator"
+        , title = "Fourier Transform Visualizer"
         , view = view
         , update = update
         }
@@ -136,17 +136,26 @@ init =
 view model =
     collage 1000 500 <|
         [
-            polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, 12 ) ] |> filled red |> move (-275, -170) |> notifyTap AmplitudeUp,
-            polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, -12 ) ] |> filled red |> move (-275, -190) |> notifyTap AmplitudeDown,
-            polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, 12 ) ] |> filled red |> move (-240, -170) |> notifyTap FrequencyUp,
-            polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, -12 ) ] |> filled red |> move (-240, -190) |> notifyTap FrequencyDown,
-            polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, 12 ) ] |> filled red |> move (-215, -170) |> notifyTap PhaseUp,
-            polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, -12 ) ] |> filled red |> move (-215, -190) |> notifyTap PhaseDown,
-            text (String.fromFloat model.amplitude ++ " Sin " ) |> size 10 |> centered |> filled red |> move (-270, -180),
-            text ("( " ++ String.fromFloat model.frequency ++ " + ") |> size 10 |> centered |> filled red |> move (-240, -180),
-            text (String.fromFloat model.phase ++ "𝜋)") |> size 10 |> centered |> filled red |> move (-215, -180),
-            rect 60 20 |> filled red |> move (-150, -180) |> notifyTap AddWave,
-            text "Add wave" |> sansserif |> centered |> filled white |> move (-150, -182) |> notifyTap AddWave,
+            group [
+                polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, 12 ) ] |> filled red |> move (-5, 12) |> notifyTap AmplitudeUp,
+                polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, -12 ) ] |> filled red |> move (-5, -6) |> notifyTap AmplitudeDown,
+                polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, 12 ) ] |> filled red |> move (30, 12) |> notifyTap FrequencyUp,
+                polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, -12 ) ] |> filled red |> move (30, -6) |> notifyTap FrequencyDown,
+                polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, 12 ) ] |> filled red |> move (55, 12) |> notifyTap PhaseUp,
+                polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, -12 ) ] |> filled red |> move (55, -6) |> notifyTap PhaseDown,
+                text "y(x) = " |> size 10 |> centered |> filled black |> move (-30, 0),
+                text (String.fromFloat model.amplitude ++ " sin " ) |> size 10 |> centered |> filled black |> move (0, 0),
+                text ("( " ++ String.fromFloat model.frequency ++ "x + ") |> size 10 |> centered |> filled black |> move (30, 0),
+                text (String.fromFloat model.phase ++ "𝜋)") |> size 10 |> centered |> filled black |> move (57, 0)
+            ] |> move (-270, -180),
+            group [
+                rect 60 20 |> filled blue |> move (0, 0) |> notifyTap AddWave,
+                text "Add wave" |> sansserif |> centered |> filled white |> move (0, -4) |> notifyTap AddWave
+            ] |> move (-150, -180),
+            group [
+                rect 60 20 |> filled red |> move (0, 0) |> notifyTap Reset,
+                text "Reset" |> sansserif |> centered |> filled white |> move (0, -4) |> notifyTap Reset
+            ] |> move (-80, -180),
             GraphicSVG.text "Frequency Domain" |> size 12 |> centered |> filled black |> move (240, 200),
           group [
             polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, 12 ) ] |> filled red |> move (54, 12) |> notifyTap SamplingUp,
@@ -156,7 +165,7 @@ view model =
           barChart (getComplexComponent model (computeDFT (getSampledInput model.sampleCount model.waves)))
             |> move (240, 50) 
         ]
-        ++
+        ++ -- Draw each of the wave components
         (List.Extra.indexedFoldl(\i w a ->
             a ++ 
             (List.map(\x -> 
@@ -244,6 +253,8 @@ update msg model =
                 else
                     model.sampleCount 
             }
+        Reset ->
+            { model | waves = [] }
 
 type alias Wave =
     {
@@ -269,3 +280,4 @@ type Msg m1
     | AddWave
     | SamplingUp
     | SamplingDown
+    | Reset
