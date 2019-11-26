@@ -21,75 +21,86 @@ freqGraphWidth = 350
 freqGraphHeight = 250
 yScaleWidth = 8
 
-sampleList = listToFloat (List.range 0 200)
-divisorForList = 3
-
 
 barChart values =
   let
     numBins = List.length values
-    maxAmplitude = List.maximum values |> Maybe.withDefault 5
-    minAmplitude = List.minimum values |> Maybe.withDefault -5
-    scaleHeight = freqGraphHeight / (maxAmplitude - minAmplitude)
+    maxAmplitude = values |> List.maximum |> Maybe.withDefault 5 |> ceiling |> toFloat
+    minAmplitude = values |> List.minimum |> Maybe.withDefault -5 |> floor |> toFloat
+    scaleHeight = if (maxAmplitude - minAmplitude) /= 0 then freqGraphHeight / (maxAmplitude - minAmplitude) else 0
 
     width = (freqGraphWidth - yScaleWidth) / toFloat numBins
 
     bar idx amplitude =
         group [ GraphicSVG.rect width (scaleHeight * (amplitude - minAmplitude))
-                  |> filled blue
-                  |> move (0,0.5 * scaleHeight * (amplitude - minAmplitude) )
-              ]
-          |> move ( toFloat idx * width - 0.5 * freqGraphWidth + 0.5 * width + yScaleWidth
-                  , -0.5 * toFloat freqGraphHeight)
+                |> filled blue
+                |> move (0,0.5 * scaleHeight * (amplitude - minAmplitude) )
+              ] |> move ( toFloat idx * width - 0.5 * freqGraphWidth + 0.5 * width + yScaleWidth, -0.5 * toFloat freqGraphHeight)
   in
     (List.indexedMap bar values)
     ++
     [
         group [
-            GraphicSVG.rect 0.5 freqGraphHeight |> filled black
+            GraphicSVG.rect 0.5 freqGraphHeight |> filled grey
                 |> move (-freqGraphWidth / 2 + yScaleWidth / 2, 0),
             GraphicSVG.text "Amplitude" |> size 9 |> centered |> filled black
                 |> rotate (degrees 90)
-                |> move (-freqGraphWidth / 2 - yScaleWidth / 2, 0),
-            GraphicSVG.rect 0.5 freqGraphWidth |> filled black 
-                |> rotate (degrees 90)
+                |> move (-freqGraphWidth / 2 - yScaleWidth, 0),
+            GraphicSVG.rect 0.5 freqGraphHeight |> filled black
+                |> move (0, 0),
+            GraphicSVG.rect 0.5 freqGraphWidth |> filled black |> rotate (degrees 90)
                 |> move (yScaleWidth / 2, -freqGraphHeight / 2),
             GraphicSVG.text "Frequency" |> size 9 |> centered |> filled black
-                |> move (0, -freqGraphHeight / 2 - 15)
+                |> move (0, -freqGraphHeight / 2 - 15),
+            GraphicSVG.rect 0.5 freqGraphWidth |> filled black |> rotate (degrees 90)
+                |> move (yScaleWidth / 2, if minAmplitude > 0 then 0 else -freqGraphHeight / 2 + scaleHeight * -minAmplitude),
+            GraphicSVG.text "0" |> size 8 |> filled black
+                |> move (-freqGraphWidth / 2 - 2, (if minAmplitude > 0 then 0 else -freqGraphHeight / 2 + scaleHeight * -minAmplitude) - 2)
         ] |> move (0, 0)
     ] |> group
 
--- Returns a list of sampled values from a given input
-getSampledInput numSamples input =
+
+getComplexComponent model vals =
+    if model.graphComponent == "real" then
+        List.map .real vals
+    else
+        List.map .imag vals
+
+-- Returns a list of sampled values of the combined wave function
+getSampledInput numSamples waves =
   let
-    inc = List.length input // numSamples
-    vals = Array.fromList input
+    inc = waveWidth / toFloat numSamples
   in
-    List.map (\x ->
-        Array.get (x * inc) vals |> Maybe.withDefault 0
-      ) <| (List.range 0 numSamples)
+    List.map(\x -> 
+        getSumWave waves (toFloat x * inc)
+    ) <| List.range 0 numSamples
+
 
 -- Computes the DFT of the given list of sampled real values
-dft realval =
+computeDFT realval =
   let
     n = List.length realval
+    vals = Array.fromList realval
   in
     List.map (\k ->
-            computeRealDFT realval k
-        ) <| (List.range 0 (n - 1))
+        {
+            real = List.foldl(\t sum ->
+                    let
+                        angle = -2 * pi * toFloat t * toFloat k / toFloat n
+                        val = Array.get t vals |> Maybe.withDefault 0
+                    in
+                        sum + val * cos(angle)
+                ) 0 (List.range 0 (n - 1)),
+            imag = List.foldl(\t sum ->
+                    let
+                        angle = -2 * pi * toFloat t * toFloat k / toFloat n
+                        val = Array.get t vals |> Maybe.withDefault 0
+                    in
+                        sum + val * sin(angle)
+                ) 0 (List.range 0 (n - 1))
+        }
+    ) <| (List.range 0 (n - 1))
 
--- Computes the DFT at entry k
-computeRealDFT realval k =
-  let
-    n = List.length realval
-  in
-    (List.Extra.indexedFoldl
-        (\t x a ->
-          let
-            angle = 2 * pi * toFloat t * (toFloat k / toFloat n)
-          in
-            a + ((x * cos (angle)) + (x * sin (angle)))
-        ) 0 realval)
 
 getSumWave : List (Wave) -> Float -> Float
 getSumWave waves x =
@@ -116,8 +127,9 @@ init =
     minFrequency = 0.1,
     phase = 0,
     maxPhase = 1.9,
-    samplingRate = 50,
-    waves = []
+    sampleCount = 50,
+    waves = [],
+    graphComponent = "real"
     }
 
 
@@ -137,11 +149,11 @@ view model =
             text "Add wave" |> sansserif |> centered |> filled white |> move (-150, -182) |> notifyTap AddWave,
             GraphicSVG.text "Frequency Domain" |> size 12 |> centered |> filled black |> move (240, 200),
           group [
-            polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, 12 ) ] |> filled red |> move (48, 12) |> notifyTap SamplingUp,
-            polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, -12 ) ] |> filled red |> move (48, -6) |> notifyTap SamplingDown,
-            GraphicSVG.text ("Sampling Rate (N) = " ++ String.fromInt model.samplingRate) |> size 10 |> centered |> filled black |> move (0, 0)
+            polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, 12 ) ] |> filled red |> move (54, 12) |> notifyTap SamplingUp,
+            polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, -12 ) ] |> filled red |> move (54, -6) |> notifyTap SamplingDown,
+            GraphicSVG.text ("Number of Samples (N) = " ++ String.fromInt model.sampleCount) |> size 10 |> centered |> filled black |> move (0, 0)
           ] |> move (200, -175),
-          barChart (dft (getSampledInput model.samplingRate (List.map(\x -> getSumWave model.waves (toFloat x * xStep)) <| List.range 0 waveGraphWidth ))) 
+          barChart (getComplexComponent model (computeDFT (getSampledInput model.sampleCount model.waves)))
             |> move (240, 50) 
         ]
         ++
@@ -217,45 +229,33 @@ update msg model =
         AddWave ->
             { model | waves =
                 model.waves ++ [{amp = model.amplitude, freq = model.frequency, phase = model.phase}]
-                    --(List.indexedMap (\index y ->
-                    --                    makeCircle ((toFloat index)*(-2) - 50) (y*model.amplitude)
-                    --                        ) (applySinFunc (divideBy sampleList)))
             }
         SamplingUp ->
-            { model | samplingRate = 
-                if model.samplingRate < waveGraphWidth - 1 then
-                    model.samplingRate + 1
+            { model | sampleCount = 
+                if model.sampleCount < waveGraphWidth - 1 then
+                    model.sampleCount + 1
                 else
-                    model.samplingRate 
+                    model.sampleCount
             }
         SamplingDown ->
-            { model | samplingRate = 
-                if model.samplingRate > 2 then
-                    model.samplingRate - 1
+            { model | sampleCount = 
+                if model.sampleCount > 2 then
+                    model.sampleCount - 1
                 else
-                    model.samplingRate 
+                    model.sampleCount 
             }
-
-makeCircle x y =
-    circle 2 |> filled black |> move (x, y)
-
-applySinFunc list = 
-    List.map sin list
-
-listToFloat list =
-    List.map toFloat list
-
-divideBy list =
-    List.map divideBy2 list
-
-divideBy2 x = 
-    x/divisorForList
 
 type alias Wave =
     {
-    amp : Float,
-    freq : Float,
-    phase : Float
+        amp : Float,
+        freq : Float,
+        phase : Float
+    }
+
+type alias Complex =
+    {
+        real: Float,
+        imag: Float
     }
 
 type Msg m1
