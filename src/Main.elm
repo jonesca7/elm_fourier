@@ -9,10 +9,12 @@ import GraphicSVG.EllieApp exposing (..)
 import List
 import ShapeCreateAssets exposing (..)
 
-sampleList = listToFloat (List.range 0 100)
+
+sampleList2 = listToFloat (List.range 0 100)
+sampleList = divideBy(longerList (listToFloat (List.range 0 100)))
+xOffset = 0
+yOffset = -50
 divisorForList = 3
-startingX = -50
-startingY = 0
 main =
     gameApp Tick
         { model = init -- init is the value in the field model
@@ -33,14 +35,14 @@ view model =
     let
         ourTextGroup =
             group
-                [ textBigger "Add a wave!" |> move ( -80, 5 )
+                [ textBigger " " |> move ( -80, 5 )
                 ]
         -- Circle that rotates in time with the sin & cosin waves
     in
     collage 700 500 <|
-              let listOfShapes =  (List.indexedMap (\index y ->
-                                      makeCircle ((startingX + toFloat index)*5) (startingY + y*15)
-                                 ) (applySinFunc(divideBy(longerList sampleList))))
+              let listOfShapes = List.indexedMap (\index y ->
+                                makeCircle ((xOffset + toFloat index)*5) ((yOffset+ y))
+                                ) (applySinFunc(sampleList))
               in
                     listOfShapes ++ [ circle 15
                         |> filled (oneColour model)
@@ -49,24 +51,13 @@ view model =
                         |> makeTransparent 0.7
                         |> move ( -95, 90 )
                     , ourTextGroup |> move ( 80, 50)
-                    ]
+                    ] ++ createLines sampleList
 
-
-
-{- this funciton isn't being used -}
-sinCurve2 model =
-    let
-        points =
-            List.map2 (\x y -> ( x, y )) model.sinGraph (List.drop 1 model.sinGraph)
-    in
-    List.take (numGraphPoints model) (List.map (\( ( a, b, col1 ), ( c, d, col2 ) ) -> line ( a, b ) ( c, d ) |> outlined (solid 1) col1) points)
-
-{-
+{-}
 TODO generate a list to define a sine wave
 -}
 longerList list = 
-    (list ++ list) 
-
+    (list ++ list ++ list)
 {- 
     write a function to draw a line between every point in the list
 -}
@@ -82,17 +73,17 @@ divideBy list =
 divideBy2 x = 
     x/divisorForList
 
-moveShapeList list x y = 
-    List.map (moveIt 50 50) list
+createLines pointList = 
+    List.map drawLinesFromList pointList{-(List.take (List.length pointList-1) pointList)-}
 
-moveIt x y = 
-    move (x, y)
+drawLinesFromList x = 
+    drawLine x (sin x) (x+(1/divisorForList)) (sin (x+(1/divisorForList)))
+
+drawLine a b c d = 
+    line ( (xOffset + a)*5, yOffset + b*15 ) (( xOffset + c)*5 , yOffset + d* 15 ) |>  outlined (solid 2) red
 
 makeCircle x y =
     circle 3 |> filled black |> move (x, y)
-
-testCurve x y =
-    circle 3 |> filled brown |> move (x,y)
 
 update msg model =
         { model | currentPage = 2}
