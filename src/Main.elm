@@ -47,7 +47,7 @@ barChart values =
                 |> rotate (degrees 90)
                 |> move (-freqGraphWidth / 2 - yScaleWidth, 0),
             GraphicSVG.rect 0.5 freqGraphHeight |> filled black
-                |> move (0, 0),
+                |> move (yScaleWidth / 2, 0),
             GraphicSVG.rect 0.5 freqGraphWidth |> filled black |> rotate (degrees 90)
                 |> move (yScaleWidth / 2, -freqGraphHeight / 2),
             GraphicSVG.text "Frequency" |> size 9 |> centered |> filled black
@@ -90,16 +90,16 @@ computeDFT realval =
                         val = Array.get t vals |> Maybe.withDefault 0
                     in
                         sum + val * cos(angle)
-                ) 0 (List.range 0 (n - 1)),
+                ) 0 (List.range 0 n),
             imag = List.foldl(\t sum ->
                     let
                         angle = -2 * pi * toFloat t * toFloat k / toFloat n
                         val = Array.get t vals |> Maybe.withDefault 0
                     in
                         sum + val * sin(angle)
-                ) 0 (List.range 0 (n - 1))
+                ) 0 (List.range 0 n)
         }
-    ) <| (List.range 0 (n - 1))
+    ) <| (List.range 0 n)
 
 
 getSumWave : List (Wave) -> Float -> Float
