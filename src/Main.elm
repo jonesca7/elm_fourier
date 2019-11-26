@@ -10,10 +10,10 @@ import List
 import List.Extra
 import ShapeCreateAssets exposing (..)
 
-waveWidth = 6 * pi
+waveWidth = 12 * pi
 waveGraphWidth = 450
 xStep = waveWidth / waveGraphWidth
-waveScaleY = 20
+waveScaleY = 10
 
 waveHeight = 50
 
@@ -143,20 +143,24 @@ view model =
         (List.Extra.indexedFoldl(\i w a ->
             a ++ 
             (List.map(\x -> 
-              group [
-                GraphicSVG.circle 1 |> filled black 
-                  |> move (toFloat x, w.amp * sin(w.freq * toFloat x * xStep + (w.phase * pi)) * waveScaleY)
-              ] |> move (-480, 100 - (toFloat i * waveHeight))
+              let
+                p1 = {x = toFloat x, y = w.amp * sin(w.freq * toFloat x * xStep + (w.phase * pi)) * waveScaleY}
+                p2 = {x = toFloat x + 1, y = w.amp * sin(w.freq * (toFloat x + 1) * xStep + (w.phase * pi)) * waveScaleY}
+              in
+                GraphicSVG.line (p1.x, p1.y) (p2.x, p2.y) |> outlined (solid 1) black |> move (-480, 100 - (toFloat i * waveHeight))
             ) <| List.range 0 waveGraphWidth)
           ) [] model.waves
         )
         ++ -- Draw the combination wave at the top
         (List.map (\x ->
-            group [
-              GraphicSVG.circle 1 |> filled black |> move (toFloat x, (getSumWave model.waves (toFloat x * xStep)) * waveScaleY)
-            ] |> move (-480, 200)
-          ) <| List.range 0 waveGraphWidth
+          let
+            p1 = {x = toFloat x, y = (getSumWave model.waves (toFloat x * xStep)) * waveScaleY}
+            p2 = {x = toFloat x + 1, y = (getSumWave model.waves ((toFloat x + 1) * xStep)) * waveScaleY}
+          in
+            GraphicSVG.line (p1.x, p1.y) (p2.x, p2.y) |> outlined (solid 1) black |> move (-480, 200)
+          ) <| List.range 0 (waveGraphWidth - 1)
         )
+
 
 update msg model =
     case msg of
