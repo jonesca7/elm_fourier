@@ -109,11 +109,13 @@ main =
 init =
     { currentPage = 1,
     amplitude = 1,
-    maxAmplitude = 10,
-    minAmplitude = 1,
+    maxAmplitude = 5,
+    minAmplitude = 0.5,
     frequency = 1,
+    maxFrequency = 10,
     minFrequency = 0.1,
     phase = 0,
+    maxPhase = 1.9,
     samplingRate = 50,
     waves = []
     }
@@ -122,22 +124,25 @@ init =
 view model =
     collage 1000 500 <|
         [
-            polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, 12 ) ] |> filled red |> move (-250, -150) |> notifyTap AmplitudeUp,
-            polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, -12 ) ] |> filled red |> move (-250, -170) |> notifyTap AmplitudeDown,
-            polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, 12 ) ] |> filled red |> move (-220, -150) |> notifyTap FrequencyUp,
-            polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, -12 ) ] |> filled red |> move (-220, -170) |> notifyTap FrequencyDown,
-            polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, 12 ) ] |> filled red |> move (-190, -150) |> notifyTap PhaseUp,
-            polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, -12 ) ] |> filled red |> move (-190, -170) |> notifyTap PhaseDown,
-            text (String.fromFloat model.amplitude ++ " Sin (" ++ String.fromFloat model.frequency ++ " + " ++ String.fromFloat model.phase ++ "𝜋)") |> size 10 |> centered |> filled red |> move (-230, -160),
-            rect 50 20 |> filled red |> move (-150, -160) |> notifyTap AddWave,
-            GraphicSVG.text "Frequency Domain" |> size 12 |> centered |> filled black |> move (200, 200),
+            polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, 12 ) ] |> filled red |> move (-275, -170) |> notifyTap AmplitudeUp,
+            polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, -12 ) ] |> filled red |> move (-275, -190) |> notifyTap AmplitudeDown,
+            polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, 12 ) ] |> filled red |> move (-240, -170) |> notifyTap FrequencyUp,
+            polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, -12 ) ] |> filled red |> move (-240, -190) |> notifyTap FrequencyDown,
+            polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, 12 ) ] |> filled red |> move (-215, -170) |> notifyTap PhaseUp,
+            polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, -12 ) ] |> filled red |> move (-215, -190) |> notifyTap PhaseDown,
+            text (String.fromFloat model.amplitude ++ " Sin " ) |> size 10 |> centered |> filled red |> move (-270, -180),
+            text ("( " ++ String.fromFloat model.frequency ++ " + ") |> size 10 |> centered |> filled red |> move (-240, -180),
+            text (String.fromFloat model.phase ++ "𝜋)") |> size 10 |> centered |> filled red |> move (-215, -180),
+            rect 60 20 |> filled red |> move (-150, -180) |> notifyTap AddWave,
+            text "Add wave" |> sansserif |> centered |> filled white |> move (-150, -182) |> notifyTap AddWave,
+            GraphicSVG.text "Frequency Domain" |> size 12 |> centered |> filled black |> move (240, 200),
           group [
             polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, 12 ) ] |> filled red |> move (48, 12) |> notifyTap SamplingUp,
             polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, -12 ) ] |> filled red |> move (48, -6) |> notifyTap SamplingDown,
             GraphicSVG.text ("Sampling Rate (N) = " ++ String.fromInt model.samplingRate) |> size 10 |> centered |> filled black |> move (0, 0)
           ] |> move (200, -175),
           barChart (dft (getSampledInput model.samplingRate (List.map(\x -> getSumWave model.waves (toFloat x * xStep)) <| List.range 0 waveGraphWidth ))) 
-            |> move (200, 50) 
+            |> move (240, 50) 
         ]
         ++
         (List.Extra.indexedFoldl(\i w a ->
@@ -182,7 +187,11 @@ update msg model =
                     model.amplitude 
             }
         FrequencyUp ->
-            { model | frequency = Maybe.withDefault 0 (String.toFloat (Round.round 1 (model.frequency + 0.1))) 
+            { model | frequency = 
+                if model.frequency < model.maxFrequency then
+                    Maybe.withDefault 0 (String.toFloat (Round.round 1 (model.frequency + 0.1)))
+                else
+                    model.frequency
             }
         FrequencyDown ->
             { model | frequency = 
@@ -193,11 +202,17 @@ update msg model =
             }
         PhaseUp ->
             { model | phase =
-                Maybe.withDefault 0 (String.toFloat (Round.round 1 (model.phase + 0.1))) 
+                if model.phase < model.maxPhase then
+                    Maybe.withDefault 0 (String.toFloat (Round.round 1 (model.phase + 0.1)))
+                else
+                    0.0 
             }
         PhaseDown ->
             { model | phase =
-                Maybe.withDefault 0 (String.toFloat (Round.round 1 (model.phase - 0.1))) 
+                if model.phase > 0 then
+                    Maybe.withDefault 0 (String.toFloat (Round.round 1 (model.phase - 0.1))) 
+                else
+                    model.maxPhase
             }
         AddWave ->
             { model | waves =
@@ -211,13 +226,15 @@ update msg model =
                 if model.samplingRate < waveGraphWidth - 1 then
                     model.samplingRate + 1
                 else
-                    model.samplingRate }
+                    model.samplingRate 
+            }
         SamplingDown ->
             { model | samplingRate = 
                 if model.samplingRate > 2 then
                     model.samplingRate - 1
                 else
-                    model.samplingRate }
+                    model.samplingRate 
+            }
 
 makeCircle x y =
     circle 2 |> filled black |> move (x, y)
