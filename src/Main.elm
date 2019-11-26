@@ -15,6 +15,8 @@ waveGraphWidth = 450
 xStep = waveWidth / waveGraphWidth
 waveScaleY = 20
 
+waveHeight = 50
+
 freqGraphWidth = 350
 freqGraphHeight = 250
 yScaleWidth = 8
@@ -119,8 +121,6 @@ init =
 
 view model =
     collage 1000 500 <|
-        --model.waves
-        --++
         [
             polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, 12 ) ] |> filled red |> move (-250, -150) |> notifyTap AmplitudeUp,
             polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, -12 ) ] |> filled red |> move (-250, -170) |> notifyTap AmplitudeDown,
@@ -139,6 +139,17 @@ view model =
           barChart (dft (getSampledInput model.samplingRate (List.map(\x -> getSumWave model.waves (toFloat x * xStep)) <| List.range 0 waveGraphWidth ))) 
             |> move (200, 50) 
         ]
+        ++
+        (List.Extra.indexedFoldl(\i w a ->
+            a ++ 
+            (List.map(\x -> 
+              group [
+                GraphicSVG.circle 1 |> filled black 
+                  |> move (toFloat x, w.amp * sin(w.freq * toFloat x * xStep + (w.phase * pi)) * waveScaleY)
+              ] |> move (-480, 100 - (toFloat i * waveHeight))
+            ) <| List.range 0 waveGraphWidth)
+          ) [] model.waves
+        )
         ++ -- Draw the combination wave at the top
         (List.map (\x ->
             group [
