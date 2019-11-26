@@ -11,8 +11,13 @@ import List
 import List.Extra
 import ShapeCreateAssets exposing (..)
 
+waveWidth = 6 * pi
+waveGraphWidth = 450
+xStep = waveWidth / waveGraphWidth
+waveScaleY = 20
+
 inputValues : List Float
-inputValues = List.map(\x -> sin (toFloat x / 100)) <| (List.range 0 100)
+inputValues = List.map(\x -> sin (toFloat x * xStep)) <| (List.range 0 waveGraphWidth)
 
 freqGraphWidth = 350
 freqGraphHeight = 250
@@ -53,14 +58,14 @@ barChart values =
     ] |> group
 
 -- Returns a list of sampled values from a given input
-getSampledInput model input =
+getSampledInput numSamples input =
   let
-    inc = List.length input // model.samplingRate
+    inc = List.length input // numSamples
     vals = Array.fromList input
   in
     List.map (\x ->
         Array.get (x * inc) vals |> Maybe.withDefault 0
-      ) <| (List.range 0 model.samplingRate)
+      ) <| (List.range 0 numSamples)
 
 -- Computes the DFT of the given list of sampled real values
 dft realval =
@@ -84,11 +89,11 @@ computeRealDFT realval k =
             a + ((x * cos (angle)) + (x * sin (angle)))
         ) 0 realval)
 
-
+getSumWave : List (Wave userMsg) -> Float -> Float
 getSumWave waves x =
   List.foldl (\wave y ->
-      y + wave.amp * sin (x * wave.freq + wave.phase)
-    ) <| waves
+      y + wave.amp * sin (x * wave.freq + (wave.phase * pi))
+    ) 0 waves
 
 
 main =
@@ -103,7 +108,8 @@ main =
 init =
     { currentPage = 1,
       samplingRate = 50,
-      waves = [{amp = 1, freq = 1, phase = 0, points = []}]
+      waves = [{amp = 1, freq = 1, phase = 0, points = []},
+               {amp = 1, freq = 2, phase = 0, points = []}]
     }
 
 
@@ -116,8 +122,16 @@ view model =
             polygon [ ( -6, 0 ), ( 6, 0 ), ( 0, -12 ) ] |> filled red |> move (48, -6) |> notifyTap SamplingDown,
             GraphicSVG.text ("Sampling Rate (N) = " ++ String.fromInt model.samplingRate) |> size 10 |> centered |> filled black |> move (0, 0)
           ] |> move (200, -175),
-          barChart (dft (getSampledInput model inputValues)) |> move (200, 50)
+          barChart (dft (getSampledInput model.samplingRate (List.map(\x -> getSumWave model.waves (toFloat x * xStep)) <| List.range 0 waveGraphWidth ))) 
+            |> move (200, 50)
         ]
+        ++ -- Draw the combination wave at the top
+        (List.map (\x ->
+            group [
+              GraphicSVG.circle 1 |> filled black |> move (toFloat x, (getSumWave model.waves (toFloat x * xStep)) * waveScaleY)
+            ] |> move (-480, 200)
+          ) <| List.range 0 waveGraphWidth
+        ) 
 
 
 update msg model =
@@ -126,13 +140,13 @@ update msg model =
         { model | currentPage = 2}
       SamplingUp ->
         { model | samplingRate = 
-          if model.samplingRate < (List.length inputValues // 2 + 1) then
+          if model.samplingRate < waveGraphWidth - 1 then
               model.samplingRate + 1
           else
               model.samplingRate }
       SamplingDown ->
         { model | samplingRate = 
-          if model.samplingRate > 0 then
+          if model.samplingRate > 2 then
               model.samplingRate - 1
           else
               model.samplingRate }
@@ -141,3 +155,11 @@ type Msg m1
     = Tick Float GetKeyState
     | SamplingUp
     | SamplingDown
+
+type alias Wave userMsg =
+  {
+    amp: Float,
+    freq: Float,
+    phase: Float,
+    points: List (Shape userMsg)
+  }
