@@ -10,23 +10,21 @@ import List
 import List.Extra
 import ShapeCreateAssets exposing (..)
 
-waveWidth = 12 * pi
+waveWidth = 6 * pi
 waveGraphWidth = 450
 xStep = waveWidth / waveGraphWidth
 waveScaleY = 10
-
 waveHeight = 50
 
 freqGraphWidth = 350
 freqGraphHeight = 250
 yScaleWidth = 8
 
-
 barChart values =
   let
     numBins = List.length values
-    maxAmplitude = values |> List.maximum |> Maybe.withDefault 5 |> ceiling |> toFloat
-    minAmplitude = values |> List.minimum |> Maybe.withDefault -5 |> floor |> toFloat
+    maxAmplitude = values |> List.maximum |> Maybe.withDefault 1
+    minAmplitude = values |> List.minimum |> Maybe.withDefault 0
     scaleHeight = if (maxAmplitude - minAmplitude) /= 0 then freqGraphHeight / (maxAmplitude - minAmplitude) else 0
 
     width = (freqGraphWidth - yScaleWidth) / toFloat numBins
@@ -70,7 +68,7 @@ getComplexComponent model vals =
 -- Returns a list of sampled values of the combined wave function
 getSampledInput numSamples waves =
   let
-    inc = waveWidth / toFloat numSamples
+    inc = (10 * pi) / toFloat numSamples
   in
     List.map(\x -> 
         getSumWave waves (toFloat x * inc)
@@ -85,28 +83,41 @@ computeDFT realval =
   in
     List.map (\k ->
         {
-            real = List.foldl(\t sum ->
-                    let
-                        angle = -2 * pi * toFloat t * toFloat k / toFloat n
-                        val = Array.get t vals |> Maybe.withDefault 0
-                    in
-                        sum + val * cos(angle)
-                ) 0 (List.range 0 n),
-            imag = List.foldl(\t sum ->
-                    let
-                        angle = -2 * pi * toFloat t * toFloat k / toFloat n
-                        val = Array.get t vals |> Maybe.withDefault 0
-                    in
-                        sum + val * sin(angle)
-                ) 0 (List.range 0 n)
+            real = (List.foldl(\t sum ->
+                        let
+                            angle = -2 * pi * toFloat t * toFloat k / toFloat n
+                            val = Array.get t vals |> Maybe.withDefault 0
+                        in
+                            sum + val * cos(angle)
+                    ) 0 (List.range 0 n)) / toFloat n,
+            imag = (List.foldl(\t sum ->
+                        let
+                            angle = -2 * pi * toFloat t * toFloat k / toFloat n
+                            val = Array.get t vals |> Maybe.withDefault 0
+                        in
+                            sum + val * sin(angle)
+                    ) 0 (List.range 0 n)) / toFloat n
         }
     ) <| (List.range 0 n)
 
 
 getSumWave waves x =
-  List.foldl (\wave y ->
-      y + wave.amp * sin (x * wave.freq + (wave.phase * pi))
+    List.foldl (\wave y ->
+        y + wave.amp * sin (x * wave.freq + (wave.phase * pi))
     ) 0 waves
+
+getWaveIndex model (x,y) =
+    List.foldl(\i index -> 
+        let
+            top = Debug.log "top = " 96 - (toFloat i * waveHeight)
+            bottom = Debug.log "bottom = " 76 - (toFloat i * waveHeight)
+        in
+            -- Super hacky way to get the index of the button pressed based on known positions
+            if Debug.log "y = " y < top && y > bottom then
+                index + i
+            else
+                index
+    ) 0 <| List.range 0 5
 
 
 main =
@@ -127,8 +138,8 @@ init =
     minFrequency = 0.1,
     phase = 0,
     maxPhase = 1.9,
-    sampleCount = 50,
-    waves = [],
+    sampleCount = 100,
+    waves = [{amp = 1, freq = 1, phase = 0}],
     maxWaves = 6,
     graphComponent = "real"
     }
@@ -149,17 +160,34 @@ view model =
                 text "Imag" |> size 10 |> centered |> (if model.graphComponent == "imag" then filled black else filled grey) |> move (60, 0) |> notifyTap SetGraphImag
             ] |> move (320, -175),
             barChart (getComplexComponent model (computeDFT (getSampledInput model.sampleCount model.waves))) |> move (240, 50),
-            GraphicSVG.line (0, 0) (waveGraphWidth + 60, 0) |> outlined (solid 1) grey |> move (-510, 125)
+            GraphicSVG.line (0, 0) (waveGraphWidth + 60, 0) |> outlined (solid 1) grey |> move (-510, 125),
+
+            -- Dr. Anand, please consider being able to send custom data with notifyTap so I don't have to write this mess :)
+            GraphicSVG.circle 10 |> filled red |> makeTransparent 0.2 |> addOutline (solid 1) red |> move (0, 100) |> notifyTap RemoveWave0,
+            text "🗑" |> size 12 |> filled red |> move (-4, 96) |> notifyTap RemoveWave0,
+            GraphicSVG.circle 10 |> filled red |> makeTransparent 0.2 |> addOutline (solid 1) red |> move (0, 100 - (1 * waveHeight)) |> notifyTap RemoveWave1,
+            text "🗑" |> size 12 |> filled red |> move (-4, 96 - (1 * waveHeight)) |> notifyTap RemoveWave1,
+            GraphicSVG.circle 10 |> filled red |> makeTransparent 0.2 |> addOutline (solid 1) red |> move (0, 100 - (2 * waveHeight)) |> notifyTap RemoveWave2,
+            text "🗑" |> size 12 |> filled red |> move (-4, 96 - (2 * waveHeight)) |> notifyTap RemoveWave2,
+            GraphicSVG.circle 10 |> filled red |> makeTransparent 0.2 |> addOutline (solid 1) red |> move (0, 100 - (3 * waveHeight)) |> notifyTap RemoveWave3,
+            text "🗑" |> size 12 |> filled red |> move (-4, 96 - (3 * waveHeight)) |> notifyTap RemoveWave3,
+            GraphicSVG.circle 10 |> filled red |> makeTransparent 0.2 |> addOutline (solid 1) red |> move (0, 100 - (4 * waveHeight)) |> notifyTap RemoveWave4,
+            text "🗑" |> size 12 |> filled red |> move (-4, 96 - (4 * waveHeight)) |> notifyTap RemoveWave4,
+            GraphicSVG.circle 10 |> filled red |> makeTransparent 0.2 |> addOutline (solid 1) red |> move (0, 100 - (5 * waveHeight)) |> notifyTap RemoveWave5,
+            text "🗑" |> size 12 |> filled red |> move (-4, 96 - (5 * waveHeight)) |> notifyTap RemoveWave5
         ]
+        ++ -- The mess continues... This covers up buttons that shouldn't be active
+        (List.map(\i ->
+                GraphicSVG.circle 10 |> filled white |> addOutline (solid 2) white |> move (0, 100 - (toFloat i * waveHeight))
+            ) <| List.range (List.length model.waves) model.maxWaves
+        )
         ++ -- Draw each of the wave components
         (List.Extra.indexedFoldl(\i w a ->
             a
             ++
             [
                 GraphicSVG.line (0, 0) (waveGraphWidth, 0) |> outlined (dotted 1) grey |> move (-480, 100 - (toFloat i * waveHeight)),
-                GraphicSVG.line (0, 0) (waveGraphWidth + 60, 0) |> outlined (solid 1) grey |> move (-510, 75 - (toFloat i * waveHeight)),
-                GraphicSVG.circle 10 |> filled red |> makeTransparent 0.2 |> addOutline (solid 1) red |> move (0, 100 - (toFloat i * waveHeight)),
-                text "🗑" |> size 12 |> filled red |> move (-4, 96 - (toFloat i * waveHeight)) -- |> NotifyTap somehow remove this specific wave
+                GraphicSVG.line (0, 0) (waveGraphWidth + 60, 0) |> outlined (solid 1) grey |> move (-510, 75 - (toFloat i * waveHeight))
             ]
             ++
             (List.map(\x -> 
@@ -280,11 +308,23 @@ update msg model =
                     model.sampleCount 
             }
         Reset ->
-            { model | waves = [] }
+            { model | waves = [], amplitude = 1, frequency = 1, phase = 0 }
         SetGraphReal ->
             { model | graphComponent = "real" }
         SetGraphImag ->
             { model | graphComponent = "imag" }
+        RemoveWave0 ->
+            { model | waves = List.Extra.removeAt 0 model.waves }
+        RemoveWave1 ->
+            { model | waves = List.Extra.removeAt 1 model.waves }
+        RemoveWave2 ->
+            { model | waves = List.Extra.removeAt 2 model.waves }
+        RemoveWave3 ->
+            { model | waves = List.Extra.removeAt 3 model.waves }
+        RemoveWave4 ->
+            { model | waves = List.Extra.removeAt 4 model.waves }
+        RemoveWave5 ->
+            { model | waves = List.Extra.removeAt 5 model.waves }
 
 type alias Wave =
     {
@@ -313,3 +353,9 @@ type Msg m1
     | Reset
     | SetGraphReal
     | SetGraphImag
+    | RemoveWave0
+    | RemoveWave1
+    | RemoveWave2
+    | RemoveWave3
+    | RemoveWave4
+    | RemoveWave5
