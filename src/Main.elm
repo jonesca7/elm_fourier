@@ -1,3 +1,13 @@
+{-
+User: Mechatronics/Software engineering students currently enrolled in 3MX3 (Signals and Systems).
+
+Problem: Many students are capable of working through the math of the Fourier Transform, but have trouble understanding what
+it actually does and why we might want to use it.
+
+Solution: This application gives a visual demonstration of what the Fourier Transform does, in a way that is interactive and
+easy to use. Unlike other applications, adding and removing waves instantly changes the time and frequency domain representation
+of the signal, rather than requiring the user to submit changes and waiting for the program to process.
+-}
 module Main exposing (main)
 
 import Bootstrap.CDN as CDN
@@ -12,7 +22,7 @@ import ShapeCreateAssets exposing (..)
 
 waveWidth = 6 * pi
 waveGraphWidth = 450
-xStep = waveWidth / waveGraphWidth
+xStep = waveWidth / waveGraphWidth --Difference between consecutive x values
 waveScaleY = 10
 waveHeight = 50
 
@@ -128,6 +138,7 @@ main =
         , update = update
         }
 
+--Initialize values
 init =
     { currentPage = 1,
     amplitude = 1,
